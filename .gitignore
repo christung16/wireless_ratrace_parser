@@ -1,0 +1,14 @@
+*.zip
+*.log
+*.tar.gz
+*.bak
+*.csv
+*.xlsx
+*.xls
+*.json
+.venv
+.vscode
+.github
+SKILL.md
+.DS_Store
+__pycache__/
