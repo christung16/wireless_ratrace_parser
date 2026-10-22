@@ -112,7 +112,7 @@ Write every log record for one or more clients to separate XLSX worksheets:
 
 ```bash
 .venv/bin/python parse_onboarding.py \
-  --client-logs b047.e985.51a6,0011.2233.4455 \
+  --client-logs 6677.8899.aabb,0011.2233.4455 \
   --client-logs aa-bb-cc-dd-ee-ff \
   --xlsx client-logs.xlsx \
   11sep-wlc.log
