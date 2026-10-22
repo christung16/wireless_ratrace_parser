@@ -150,7 +150,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("inventory_file", type=Path, help="AP inventory CSV")
     parser.add_argument(
         "--ssid",
-        default="Corp@CLP",
+        default="Corp@company",
         help="exact WLAN name to map (default: %(default)s)",
     )
     parser.add_argument(

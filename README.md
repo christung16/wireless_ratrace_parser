@@ -19,7 +19,7 @@ Install the Python dependency in the project virtual environment:
 
 ## Run
 
-The default SSID is `Corp@CLP`, and the default inventory file is
+The default SSID is `Corp@company`, and the default inventory file is
 `clp_inventory_2f.csv`:
 
 ```bash
@@ -30,7 +30,7 @@ The values can be supplied explicitly:
 
 ```bash
 .venv/bin/python parse_onboarding.py \
-  --ssid Corp@CLP \
+  --ssid Corp@company \
   --inventory clp_inventory_2f.csv \
   11sep-wlc.log
 ```
@@ -69,12 +69,15 @@ present, otherwise the reason indicates that no completion appeared before the
 end of the capture. Fast roams that do not perform a new AAA exchange are not
 counted as AAA transactions.
 
-The XLSX `Per AP` worksheet includes selected-SSID average AAA latency and
-incomplete transaction count. `AAA by Client` includes completion and latency
-metrics plus each AP's transaction count for every observed client. When
-incomplete transactions exist, `AAA Incomplete` lists their client MAC, AP,
-timestamps, and reason. With `--client-logs`, stdout also prints AAA metrics for
-the requested client MAC addresses.
+The XLSX `Per AP` worksheet reports attempts, successes, and success rates
+separately for association and reassociation, followed by the unchanged total
+attempts and successes. A rate is blank when that AP has no attempts of the
+corresponding type. The worksheet also includes selected-SSID average AAA
+latency and incomplete transaction count. `AAA by Client` includes completion
+and latency metrics plus each AP's transaction count for every observed client.
+When incomplete transactions exist, `AAA Incomplete` lists their client MAC,
+AP, timestamps, and reason. With `--client-logs`, stdout also prints AAA metrics
+for the requested client MAC addresses.
 
 Show a specified number of client MACs with the most failure events on each
 hardware platform, together with each client's failure reasons and counts:

@@ -35,7 +35,7 @@ AAA_SUCCESS_RE = re.compile(
 )
 ASSOCIATION_RE = re.compile(
     rf"MAC: (?P<client>{MAC})\s+"
-    rf"(?:Re-)?Association received\. BSSID (?P<bssid>{MAC}), "
+    rf"(?P<association_type>Re-Association|Association) received\. BSSID (?P<bssid>{MAC}), "
     rf"WLAN (?P<ssid>[^,]+), "
     rf"Slot [0-9]+ AP (?P<ap_mac>{MAC}), "
     r"(?P<ap_name>[^,]+), Site tag "
@@ -68,6 +68,10 @@ class Counts:
 
     attempts: int = 0
     successes: int = 0
+    association_attempts: int = 0
+    association_successes: int = 0
+    reassociation_attempts: int = 0
+    reassociation_successes: int = 0
     failures: int = 0
     clients: set[str] = field(default_factory=set)
     failure_events: dict[str, int] = field(default_factory=dict)
@@ -264,7 +268,7 @@ def get_platform(access_point: AccessPoint, inventory: Inventory) -> str:
 
 def summarize(
     stream: TextIO,
-    ssid: str = "Corp@CLP",
+    ssid: str = "Corp@company",
     start_time: datetime | None = None,
     end_time: datetime | None = None,
     client_macs: tuple[str, ...] | str | None = None,
@@ -290,6 +294,7 @@ def summarize(
     counts: dict[AccessPoint, Counts] = defaultdict(Counts)
     association_events: dict[AccessPoint, int] = defaultdict(int)
     active_attempts: dict[str, AccessPoint] = {}
+    active_attempt_types: dict[str, str] = {}
     pending_failures: dict[str, PendingFailure] = {}
     pending_aaa: dict[
         str,
@@ -375,6 +380,7 @@ def summarize(
         if counted and access_point:
             if active_attempts.get(client) == access_point:
                 active_attempts.pop(client)
+                active_attempt_types.pop(client, None)
             result = counts[access_point]
             result.failures += 1
             result.failure_events[pending.reason] = (
@@ -561,6 +567,7 @@ def summarize(
             association_events[access_point] += 1
             if association.group("ssid").strip() != ssid:
                 active_attempts.pop(client, None)
+                active_attempt_types.pop(client, None)
                 continue
             if ssid_bssids:
                 mapped_access_point = ssid_bssids.get(
@@ -570,10 +577,18 @@ def summarize(
                     mapped_access_point.mac
                 ) != normalize_mac(access_point.mac):
                     active_attempts.pop(client, None)
+                    active_attempt_types.pop(client, None)
                     continue
-            counts[access_point].attempts += 1
-            counts[access_point].clients.add(client)
+            result = counts[access_point]
+            result.attempts += 1
+            association_type = association.group("association_type")
+            if association_type == "Re-Association":
+                result.reassociation_attempts += 1
+            else:
+                result.association_attempts += 1
+            result.clients.add(client)
             active_attempts[client] = access_point
+            active_attempt_types[client] = association_type
             continue
 
         run = RUN_RE.search(line)
@@ -581,8 +596,14 @@ def summarize(
             client = run.group("client").lower()
             resolve_failure(client)
             access_point = active_attempts.pop(client, None)
+            association_type = active_attempt_types.pop(client, None)
             if access_point:
-                counts[access_point].successes += 1
+                result = counts[access_point]
+                result.successes += 1
+                if association_type == "Re-Association":
+                    result.reassociation_successes += 1
+                else:
+                    result.association_successes += 1
             continue
 
         deletion = DELETE_RE.search(line)
@@ -1112,10 +1133,16 @@ def save_xlsx(
             "AP MAC",
             "Platform",
             "Client MACs",
-            "Attempts",
-            "Successes",
+            "Association Attempts",
+            "Association Successes",
+            "Association Success %",
+            "Reassociation Attempts",
+            "Reassociation Successes",
+            "Reassociation Success %",
+            "Total Attempts",
+            "Total Successes",
             "Failures",
-            "Success %",
+            "Total Success %",
             "AAA Average Latency (ms)",
             "AAA Incomplete",
         )
@@ -1130,6 +1157,20 @@ def save_xlsx(
                 access_point.mac,
                 get_platform(access_point, inventory),
                 len(result.clients),
+                result.association_attempts,
+                result.association_successes,
+                (
+                    result.association_successes / result.association_attempts
+                    if result.association_attempts
+                    else None
+                ),
+                result.reassociation_attempts,
+                result.reassociation_successes,
+                (
+                    result.reassociation_successes / result.reassociation_attempts
+                    if result.reassociation_attempts
+                    else None
+                ),
                 result.attempts,
                 result.successes,
                 result.failures,
@@ -1368,9 +1409,10 @@ def save_xlsx(
                 80,
             )
             worksheet.column_dimensions[get_column_letter(column_cells[0].column)].width = width
-    for cell in per_ap["H"][1:]:
-        cell.number_format = "0.00%"
-    for cell in per_ap["I"][1:]:
+    for column in ("G", "J", "N"):
+        for cell in per_ap[column][1:]:
+            cell.number_format = "0.00%"
+    for cell in per_ap["O"][1:]:
         cell.number_format = "0.000"
     for cell in by_platform["K"][1:]:
         cell.number_format = "0.00"
@@ -1401,7 +1443,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("log_file", type=Path, help="C9800 wireless profile log")
     parser.add_argument(
         "--ssid",
-        default="Corp@CLP",
+        default="Corp@company",
         help="exact WLAN name to include (default: %(default)s)",
     )
     parser.add_argument(
