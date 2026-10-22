@@ -20,7 +20,7 @@ Install the Python dependency in the project virtual environment:
 ## Run
 
 The default SSID is `Corp@company`, and the default inventory file is
-`clp_inventory_2f.csv`:
+`test_inventory_2f.csv`:
 
 ```bash
 .venv/bin/python parse_onboarding.py 11sep-wlc.log
@@ -31,7 +31,7 @@ The values can be supplied explicitly:
 ```bash
 .venv/bin/python parse_onboarding.py \
   --ssid Corp@company \
-  --inventory clp_inventory_2f.csv \
+  --inventory test_inventory_2f.csv \
   11sep-wlc.log
 ```
 
@@ -45,7 +45,7 @@ one AP are stored as semicolon-separated values.
 The mapping can also be run separately:
 
 ```bash
-.venv/bin/python map_bssid.py 11sep-wlc.log clp_inventory_2f.csv
+.venv/bin/python map_bssid.py 11sep-wlc.log test_inventory_2f.csv
 ```
 
 Use `--output PATH` with `map_bssid.py` to write a separate CSV without a
